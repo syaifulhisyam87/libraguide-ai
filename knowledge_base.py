@@ -5,16 +5,16 @@ import sqlite3
 from pathlib import Path
 
 import numpy as np
-import requests
 from pypdf import PdfReader
+
+import ai_provider as ai
 
 
 PROJECT_DIRECTORY = Path(__file__).resolve().parent
 DATA_DIRECTORY = PROJECT_DIRECTORY / "data"
-DATABASE_PATH = DATA_DIRECTORY / "libraguide.db"
+DATABASE_PATH = DATA_DIRECTORY / "libraguide_gemini.db"
 
-OLLAMA_EMBED_URL = "http://localhost:11434/api/embed"
-EMBEDDING_MODEL = "embeddinggemma"
+EMBEDDING_MODEL = ai.EMBEDDING_MODEL
 
 CHUNK_SIZE = 220
 CHUNK_OVERLAP = 40
@@ -140,50 +140,17 @@ def extract_pdf(file_bytes):
     return extracted_chunks, len(reader.pages)
 
 
-def create_embeddings(texts, batch_size=16):
-    """Generate normalized embeddings through Ollama."""
-    all_embeddings = []
-
-    for start in range(0, len(texts), batch_size):
-        batch = texts[start:start + batch_size]
-
-        response = requests.post(
-            OLLAMA_EMBED_URL,
-            json={
-                "model": EMBEDDING_MODEL,
-                "input": batch,
-            },
-            timeout=300,
-        )
-
-        response.raise_for_status()
-
-        batch_embeddings = response.json().get(
-            "embeddings",
-            [],
-        )
-
-        if len(batch_embeddings) != len(batch):
-            raise ValueError(
-                "Ollama returned an unexpected number of embeddings."
-            )
-
-        all_embeddings.extend(batch_embeddings)
-
-    matrix = np.asarray(
-        all_embeddings,
-        dtype=np.float32,
+def create_embeddings(
+    texts,
+    batch_size=16,
+    task_type="RETRIEVAL_DOCUMENT",
+):
+    """Generate normalized embeddings through Gemini."""
+    return ai.create_embeddings(
+        texts=texts,
+        task_type=task_type,
+        batch_size=batch_size,
     )
-
-    norms = np.linalg.norm(
-        matrix,
-        axis=1,
-        keepdims=True,
-    )
-
-    norms = np.clip(norms, 1e-12, None)
-
-    return matrix / norms
 
 
 def index_pdf(filename, file_bytes):
@@ -411,7 +378,10 @@ def search_knowledge_base(question, top_k=5):
     if not passages:
         return []
 
-    question_embedding = create_embeddings([question])[0]
+    question_embedding = create_embeddings(
+        [question],
+        task_type="RETRIEVAL_QUERY",
+    )[0]
 
     if (
         document_embeddings.shape[1]

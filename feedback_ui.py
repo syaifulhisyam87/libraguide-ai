@@ -1,4 +1,3 @@
-import requests
 import streamlit as st
 
 import feedback_memory as fm
@@ -378,18 +377,6 @@ def render_verified_note_publisher(feedback):
                     "published and is available for retrieval."
                 )
                 st.rerun()
-
-            except requests.exceptions.ConnectionError:
-                st.error(
-                    "Cannot connect to Ollama. Start Ollama "
-                    "before publishing the note."
-                )
-
-            except requests.exceptions.Timeout:
-                st.error(
-                    "Ollama took too long to create the note "
-                    "embedding."
-                )
 
             except ValueError as error:
                 st.error(str(error))

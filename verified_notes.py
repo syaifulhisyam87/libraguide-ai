@@ -321,7 +321,10 @@ def search_verified_notes(question, top_k=5):
     if not rows:
         return []
 
-    question_embedding = kb.create_embeddings([question])[0]
+    question_embedding = kb.create_embeddings(
+        [question],
+        task_type="RETRIEVAL_QUERY",
+    )[0]
     note_rows = []
     embeddings = []
 

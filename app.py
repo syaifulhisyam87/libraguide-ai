@@ -1,9 +1,9 @@
 ﻿import hmac
 
-import requests
 import streamlit as st
 
 import account_ui
+import ai_provider as ai
 import conversation_memory as cm
 import conversation_ui
 import feedback_ui
@@ -12,8 +12,6 @@ import verified_notes as vn
 
 
 APP_NAME = "LibraGuide AI"
-CHAT_MODEL = "qwen3:4b"
-CHAT_URL = "http://localhost:11434/api/chat"
 TOP_K = 5
 
 GENERAL_SYSTEM_PROMPT = """
@@ -65,7 +63,7 @@ def passage_citation(passage):
 
 
 def build_context(passages):
-    """Format retrieved passages for Qwen."""
+    """Format retrieved passages for Gemini."""
     sections = []
 
     for passage in passages:
@@ -160,8 +158,8 @@ verified_note_count = vn.active_note_count()
 st.title("📚 LibraGuide AI")
 st.subheader("Persistent Library Knowledge Assistant")
 st.caption(
-    "Powered locally by Ollama, Qwen3, "
-    "EmbeddingGemma, SQLite and Streamlit"
+    "Powered by Google Gemini, Gemini Embeddings, "
+    "SQLite and Streamlit"
 )
 
 with st.sidebar:
@@ -252,18 +250,6 @@ with st.sidebar:
                             st.success(result["message"])
                         else:
                             st.info(result["message"])
-
-                    except requests.exceptions.ConnectionError:
-                        st.error(
-                            f"{uploaded_file.name}: cannot "
-                            "connect to Ollama."
-                        )
-
-                    except requests.exceptions.Timeout:
-                        st.error(
-                            f"{uploaded_file.name}: indexing "
-                            "timed out."
-                        )
 
                     except Exception as error:
                         st.error(
@@ -556,25 +542,10 @@ citation label for supported claims.
                     with st.spinner(
                         "Preparing a grounded answer..."
                     ):
-                        response = requests.post(
-                            CHAT_URL,
-                            json={
-                                "model": CHAT_MODEL,
-                                "messages": conversation,
-                                "stream": False,
-                                "think": False,
-                                "options": {
-                                    "temperature": 0.1,
-                                    "num_ctx": 4096,
-                                },
-                            },
-                            timeout=300,
+                        answer = ai.generate_chat(
+                            conversation,
+                            temperature=0.1,
                         )
-
-                        response.raise_for_status()
-                        answer = response.json()[
-                            "message"
-                        ]["content"]
 
                         st.markdown(answer)
                         show_evidence(evidence)
@@ -597,25 +568,10 @@ citation label for supported claims.
                 with st.spinner(
                     "LibraGuide is preparing the answer..."
                 ):
-                    response = requests.post(
-                        CHAT_URL,
-                        json={
-                            "model": CHAT_MODEL,
-                            "messages": conversation,
-                            "stream": False,
-                            "think": False,
-                            "options": {
-                                "temperature": 0.3,
-                                "num_ctx": 4096,
-                            },
-                        },
-                        timeout=300,
+                    answer = ai.generate_chat(
+                        conversation,
+                        temperature=0.3,
                     )
-
-                    response.raise_for_status()
-                    answer = response.json()[
-                        "message"
-                    ]["content"]
 
                     st.markdown(answer)
 
@@ -675,18 +631,6 @@ citation label for supported claims.
                 )
 
         st.rerun()
-
-    except requests.exceptions.ConnectionError:
-        st.error(
-            "Cannot connect to Ollama. Make sure the "
-            "Ollama application is running."
-        )
-
-    except requests.exceptions.Timeout:
-        st.error(
-            "The operation took too long. Try a shorter "
-            "question or a smaller document."
-        )
 
     except Exception as error:
         st.error(f"An error occurred: {error}")
