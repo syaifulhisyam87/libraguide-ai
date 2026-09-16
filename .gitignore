@@ -1,0 +1,42 @@
+# Passwords and secrets
+.streamlit/secrets.toml
+.env
+.env.*
+
+# User accounts, conversations and knowledge databases
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Uploaded or private documents
+uploads/
+uploaded_documents/
+*.pdf
+
+# Python temporary files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temporary application backups
+app_*_backup.py
+app_before_*.py
+
+# Experimental provider tests
+test_hf.py
+test_mistral.py
